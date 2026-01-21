@@ -50,7 +50,6 @@ public class EntityListener implements Listener {
 
 	@EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
 	public final void onPlayerDamage(final EntityDamageByEntityEvent event) {
-		// OPTİMİZASYON: Hasar alan veya veren oyuncu/ok değilse anında dur (CPU Dostu)
 		final Entity victim = event.getEntity();
 		final Entity damager = event.getDamager();
 		if (!(victim instanceof Player) && !(damager instanceof Player) && !(damager instanceof Projectile)) return;
@@ -165,9 +164,7 @@ public class EntityListener implements Listener {
 		if (Conf.DISABLE_GAMEMODE.asBool() && attacker.getGameMode() != GameMode.SURVIVAL) {
 			attacker.setGameMode(GameMode.SURVIVAL);
 		}
-		if (Conf.DISABLE_DISGUISE.asBool()) {
-			playerHandler.getPlugin().getDependencyManager().disableDisguise(attacker);
-		}
+		// LibsDisguises satiri buradan kaldirildi (Derleme hatasi cozumu icin)
 		if (Conf.DISABLE_INVISIBILITY.asBool() && attacker.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
 			attacker.removePotionEffect(PotionEffectType.INVISIBILITY);
 		}
@@ -234,8 +231,7 @@ public class EntityListener implements Listener {
 
 		final Entity igniter = event.getIgnitingEntity();
 		if (igniter instanceof final LightningStrike lightning && lightningCache.asMap().containsKey(igniter)) {
-			// OPTİMİZASYON: distanceSquared ile yarıçap kontrolü (2^2 = 4)
-			for (final Entity entity : igniter.getNearbyEntities(2, 2, 2)) {
+			for (final Entity entity : lightning.getNearbyEntities(2, 2, 2)) {
 				if (entity instanceof final Player player) {
 					final CombatPlayer attacked = playerHandler.get(player);
 					if (!attacked.hasPvPEnabled() || attacked.isNewbie() || attacked.hasRespawnProtection()) {
