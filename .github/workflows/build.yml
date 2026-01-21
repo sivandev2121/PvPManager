@@ -1,19 +1,25 @@
-name: Java build
+name: Maven build
 on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Set up JDK 21
+    
+    - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: '21'
+        java-version: '17' # PvPManager genellikle Java 17 ile derlenir
         distribution: 'temurin'
-    - name: Build with Gradle
-      run: ./gradlew build --no-daemon
+        cache: 'maven' # Kütüphaneleri önbelleğe alarak derlemeyi hızlandırır
+        
+    - name: Build with Maven
+      # -DskipTests: Testleri atlayarak derlemeyi saniyeler içinde bitirir
+      run: mvn clean install -DskipTests
+      
     - name: Upload JAR
       uses: actions/upload-artifact@v4
       with:
         name: PvPManager-Optimized
-        path: pvpmanager/build/libs/*.jar
+        # Maven derleme yapınca dosyaları her zaman 'target' klasörüne atar
+        path: "**/target/*.jar"
