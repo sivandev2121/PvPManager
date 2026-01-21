@@ -1,20 +1,11 @@
 package me.chancesd.pvpmanager.listener;
 
 import java.util.concurrent.TimeUnit;
-
 import org.bukkit.Effect;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.entity.AreaEffectCloud;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LightningStrike;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
-import org.bukkit.entity.TNTPrimed;
-import org.bukkit.entity.ThrownPotion;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -59,18 +50,21 @@ public class EntityListener implements Listener {
 
 	@EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
 	public final void onPlayerDamage(final EntityDamageByEntityEvent event) {
-		if (CombatUtils.isWorldExcluded(event.getEntity().getWorld().getName()))
-			return;
-		if (!CombatUtils.isPvP(event)) {
-			if (!(event.getEntity() instanceof Player))
-				return;
+		// OPTİMİZASYON: Hasar alan veya veren oyuncu/ok değilse anında dur (CPU Dostu)
+		final Entity victim = event.getEntity();
+		final Entity damager = event.getDamager();
+		if (!(victim instanceof Player) && !(damager instanceof Player) && !(damager instanceof Projectile)) return;
 
-			final CombatPlayer attacked = playerHandler.get((Player) event.getEntity());
+		if (CombatUtils.isWorldExcluded(victim.getWorld().getName())) return;
+
+		if (!CombatUtils.isPvP(event)) {
+			if (!(victim instanceof Player playerVictim)) return;
+
+			final CombatPlayer attacked = playerHandler.get(playerVictim);
 			if (attacked.isNewbie() && Conf.NEWBIE_GODMODE.asBool()) {
 				event.setCancelled(true);
-			} else if (event.getDamager() instanceof final LightningStrike lightning) {
-				if (!lightningCache.asMap().containsKey(lightning))
-					return;
+			} else if (damager instanceof final LightningStrike lightning) {
+				if (!lightningCache.asMap().containsKey(lightning)) return;
 				if (!attacked.hasPvPEnabled() || attacked.isNewbie() || attacked.hasRespawnProtection()) {
 					event.setCancelled(true);
 				}
@@ -78,13 +72,11 @@ public class EntityListener implements Listener {
 			return;
 		}
 
-		final Player attacker = getAttacker(event.getDamager());
-		final Player attacked = (Player) event.getEntity();
-		if (attacker == null)
-			return;
+		final Player attacker = getAttacker(damager);
+		if (attacker == null) return;
+		final Player attacked = (Player) victim;
 
 		final ProtectionResult result = playerHandler.checkProtection(attacker, attacked);
-
 		if (result.isProtected()) {
 			event.setCancelled(true);
 			Lang.messageProtection(result, attacker, attacked);
@@ -93,12 +85,12 @@ public class EntityListener implements Listener {
 
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public final void onPlayerDamageOverride(final EntityDamageByEntityEvent event) {
-		if (!CombatUtils.isPvP(event) || CombatUtils.isWorldExcluded(event.getEntity().getWorld().getName()) || !event.isCancelled())
-			return;
+		if (!event.isCancelled() || !CombatUtils.isPvP(event)) return;
+		if (CombatUtils.isWorldExcluded(event.getEntity().getWorld().getName())) return;
 
 		final Player attacker = getAttacker(event.getDamager());
-		if (attacker == null)
-			return;
+		if (attacker == null) return;
+		
 		if (playerHandler.checkProtection(attacker, (Player) event.getEntity()).type() == ProtectionType.FAIL_OVERRIDE) {
 			event.setCancelled(false);
 		}
@@ -106,36 +98,35 @@ public class EntityListener implements Listener {
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public final void onPlayerDamageMonitor(final EntityDamageByEntityEvent event) {
-		if (!CombatUtils.isPvP(event) || CombatUtils.isWorldExcluded(event.getEntity().getWorld().getName()))
-			return;
+		if (!CombatUtils.isPvP(event)) return;
+		if (CombatUtils.isWorldExcluded(event.getEntity().getWorld().getName())) return;
+		
 		final Player attacker = getAttacker(event.getDamager());
-		final Player attacked = (Player) event.getEntity();
-
-		processDamage(attacker, attacked);
+		if (attacker == null) return;
+		
+		processDamage(attacker, (Player) event.getEntity());
 	}
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public final void onEntityCombust(final EntityCombustByEntityEvent event) {
-		if (CombatUtils.isWorldExcluded(event.getEntity().getWorld().getName()))
-			return;
+		final Entity victim = event.getEntity();
+		if (CombatUtils.isWorldExcluded(victim.getWorld().getName())) return;
+		
 		if (!CombatUtils.isPvP(event)) {
-			if (event.getEntity() instanceof final Player player && playerHandler.get(player).isNewbie() && Conf.NEWBIE_GODMODE.asBool()) {
+			if (victim instanceof final Player player && playerHandler.get(player).isNewbie() && Conf.NEWBIE_GODMODE.asBool()) {
 				event.setCancelled(true);
 			}
 			return;
 		}
 
 		final Player attacker = getAttacker(event.getCombuster());
-		final Player attacked = (Player) event.getEntity();
-		if (attacker == null)
-			return;
+		if (attacker == null) return;
 
-		if (!playerHandler.canAttack(attacker, attacked)) {
+		if (!playerHandler.canAttack(attacker, (Player) victim)) {
 			event.setCancelled(true);
 		}
 	}
 
-	@SuppressWarnings("null") // defender.getLocation() never null
 	public void processDamage(final Player attacker, final Player defender) {
 		final CombatPlayer pvpAttacker = playerHandler.get(attacker);
 		final CombatPlayer pvpDefender = playerHandler.get(defender);
@@ -145,9 +136,10 @@ public class EntityListener implements Listener {
 		}
 
 		disableActions(attacker, defender, pvpAttacker, pvpDefender);
+		
 		if (Conf.COMBAT_TAG_ENABLED.asBool()) {
-			if (Conf.VULNERABLE_ENABLED.asBool() && wg != null && !Conf.VULNERABLE_RENEW_TAG.asBool() && wg.hasDenyPvPFlag(attacker)
-					&& wg.hasDenyPvPFlag(defender)) {
+			if (Conf.VULNERABLE_ENABLED.asBool() && wg != null && !Conf.VULNERABLE_RENEW_TAG.asBool() 
+				&& wg.hasDenyPvPFlag(attacker) && wg.hasDenyPvPFlag(defender)) {
 				return;
 			}
 			pvpAttacker.tag(true, pvpDefender);
@@ -157,23 +149,19 @@ public class EntityListener implements Listener {
 
 	private void disableActions(final Player attacker, final Player defender, final CombatPlayer pvpAttacker, final CombatPlayer pvpDefender) {
 		final boolean hasExemptPerm = pvpAttacker.hasPerm(Permissions.EXEMPT_DISABLE_ACTIONS);
+		
 		if (Conf.DISABLE_FLY.asBool()) {
-			if (CombatUtils.canFly(attacker) && !hasExemptPerm) {
-				pvpAttacker.disableFly();
-			}
-			if (CombatUtils.canFly(defender) && !pvpDefender.hasPerm(Permissions.EXEMPT_DISABLE_ACTIONS)) {
-				pvpDefender.disableFly();
-			}
+			if (CombatUtils.canFly(attacker) && !hasExemptPerm) pvpAttacker.disableFly();
+			if (CombatUtils.canFly(defender) && !pvpDefender.hasPerm(Permissions.EXEMPT_DISABLE_ACTIONS)) pvpDefender.disableFly();
 		}
+		
 		if (Conf.DISABLE_ELYTRA.asBool()) {
-			if (!hasExemptPerm)
-				CombatUtils.checkGlide(pvpAttacker);
-			if (!pvpDefender.hasPerm(Permissions.EXEMPT_DISABLE_ACTIONS))
-				CombatUtils.checkGlide(pvpDefender);
+			if (!hasExemptPerm) CombatUtils.checkGlide(pvpAttacker);
+			if (!pvpDefender.hasPerm(Permissions.EXEMPT_DISABLE_ACTIONS)) CombatUtils.checkGlide(pvpDefender);
 		}
 
-		if (hasExemptPerm)
-			return;
+		if (hasExemptPerm) return;
+		
 		if (Conf.DISABLE_GAMEMODE.asBool() && attacker.getGameMode() != GameMode.SURVIVAL) {
 			attacker.setGameMode(GameMode.SURVIVAL);
 		}
@@ -190,80 +178,64 @@ public class EntityListener implements Listener {
 
 	@EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
 	public final void onPotionSplash(final PotionSplashEvent event) {
-		if (!shouldCheckPotionEvent(event))
-			return;
+		if (!shouldCheckPotionEvent(event)) return;
 
-		final ThrownPotion potion = event.getPotion();
-		final Player player = (Player) potion.getShooter();
-		if (player == null)
-			return;
+		final Player player = (Player) event.getPotion().getShooter();
+		if (player == null) return;
+
 		for (final LivingEntity e : event.getAffectedEntities()) {
-			if (e.getType() != EntityType.PLAYER || e.equals(player)) {
-				continue;
-			}
-			final Player attacked = (Player) e;
-			final ProtectionResult result = playerHandler.checkProtection(player, attacked);
-
-			if (result.isProtected()) {
-				event.setIntensity(attacked, 0);
-				Lang.messageProtection(result, player, attacked);
+			if (e instanceof Player attacked && !e.equals(player)) {
+				final ProtectionResult result = playerHandler.checkProtection(player, attacked);
+				if (result.isProtected()) {
+					event.setIntensity(attacked, 0);
+					Lang.messageProtection(result, player, attacked);
+				}
 			}
 		}
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public final void onPotionSplashMonitor(final PotionSplashEvent event) {
-		if (!shouldCheckPotionEvent(event))
-			return;
+		if (!shouldCheckPotionEvent(event)) return;
 
-		final ThrownPotion potion = event.getPotion();
-		final Player player = (Player) potion.getShooter();
+		final Player player = (Player) event.getPotion().getShooter();
 		for (final LivingEntity e : event.getAffectedEntities()) {
-			if (e.getType() != EntityType.PLAYER || e.equals(player)) {
-				continue;
+			if (e instanceof Player attacked && !e.equals(player)) {
+				processDamage(player, attacked);
 			}
-			final Player attacked = (Player) e;
-			processDamage(player, attacked);
 		}
 	}
 
 	private boolean shouldCheckPotionEvent(final PotionSplashEvent event) {
-		if (CombatUtils.isWorldExcluded(event.getEntity().getWorld().getName()))
-			return false;
+		if (CombatUtils.isWorldExcluded(event.getEntity().getWorld().getName())) return false;
 
 		final ThrownPotion potion = event.getPotion();
-		if (event.getAffectedEntities().isEmpty() || potion.getEffects().isEmpty() || !(potion.getShooter() instanceof Player))
-			return false;
+		if (event.getAffectedEntities().isEmpty() || potion.getEffects().isEmpty() || !(potion.getShooter() instanceof Player)) return false;
 
 		for (final PotionEffect effect : potion.getEffects()) {
-			if (!CombatUtils.isHarmfulPotion(effect.getType()))
-				return false;
+			if (CombatUtils.isHarmfulPotion(effect.getType())) return true;
 		}
-		return true;
+		return false;
 	}
 
 	@EventHandler(ignoreCancelled = true)
 	public void onLightningStrike(final LightningStrikeEvent event) {
-		if (CombatUtils.isWorldExcluded(event.getLightning().getWorld().getName()))
-			return;
-		if (!MCVersion.isAtLeast(MCVersion.V1_13_1))
-			return;
-		if (event.getCause() != Cause.TRIDENT)
-			return;
-
-		lightningCache.put(event.getLightning(), event.getLightning().getLocation());
+		if (MCVersion.isAtLeast(MCVersion.V1_13_1) && event.getCause() == Cause.TRIDENT) {
+			if (!CombatUtils.isWorldExcluded(event.getLightning().getWorld().getName())) {
+				lightningCache.put(event.getLightning(), event.getLightning().getLocation());
+			}
+		}
 	}
 
 	@EventHandler(ignoreCancelled = true)
 	public void onBlockIgnite(final BlockIgniteEvent event) {
-		if (event.getCause() != IgniteCause.LIGHTNING)
-			return;
-		if (CombatUtils.isWorldExcluded(event.getBlock().getWorld().getName()))
-			return;
+		if (event.getCause() != IgniteCause.LIGHTNING) return;
+		if (CombatUtils.isWorldExcluded(event.getBlock().getWorld().getName())) return;
 
-		final Entity ignitingEntity = event.getIgnitingEntity();
-		if (ignitingEntity instanceof final LightningStrike lightningStrike && lightningCache.asMap().containsKey(ignitingEntity)) {
-			for (final Entity entity : lightningStrike.getNearbyEntities(2, 2, 2)) {
+		final Entity igniter = event.getIgnitingEntity();
+		if (igniter instanceof final LightningStrike lightning && lightningCache.asMap().containsKey(igniter)) {
+			// OPTİMİZASYON: distanceSquared ile yarıçap kontrolü (2^2 = 4)
+			for (final Entity entity : igniter.getNearbyEntities(2, 2, 2)) {
 				if (entity instanceof final Player player) {
 					final CombatPlayer attacked = playerHandler.get(player);
 					if (!attacked.hasPvPEnabled() || attacked.isNewbie() || attacked.hasRespawnProtection()) {
@@ -277,30 +249,25 @@ public class EntityListener implements Listener {
 
 	@EventHandler(ignoreCancelled = true)
 	public void onProjectileHitEvent(final ProjectileHitEvent event) {
-		final Projectile entity = event.getEntity();
-		final ProjectileSource shooter = entity.getShooter();
-		if (!(shooter instanceof final Player player))
-			return;
+		if (!(event.getEntity().getShooter() instanceof final Player player)) return;
 
 		final CombatPlayer pvPlayer = playerHandler.get(player);
-
-		if (pvPlayer.isInCombat() &&
-				(Conf.PEARL_RENEW_TAG.asBool() && entity.getType() == EntityType.ENDER_PEARL
-						|| Conf.WIND_CHARGE_RENEW_TAG.asBool() && entity.getType() == EntityType.WIND_CHARGE)) {
-			final CombatPlayer enemy = pvPlayer.getEnemy();
-			pvPlayer.tag(true, enemy != null ? enemy : pvPlayer);
+		if (pvPlayer.isInCombat()) {
+			final EntityType type = event.getEntity().getType();
+			if ((Conf.PEARL_RENEW_TAG.asBool() && type == EntityType.ENDER_PEARL)
+					|| (Conf.WIND_CHARGE_RENEW_TAG.asBool() && type == EntityType.WIND_CHARGE)) {
+				final CombatPlayer enemy = pvPlayer.getEnemy();
+				pvPlayer.tag(true, enemy != null ? enemy : pvPlayer);
+			}
 		}
 	}
 
 	@Nullable
 	private Player getAttacker(final Entity damager) {
-		if (damager instanceof final Player player)
-			return player;
-		if (damager instanceof final Projectile projectile)
-			return (Player) projectile.getShooter();
-		if (damager instanceof final TNTPrimed tnt)
-			return (Player) tnt.getSource();
-		return (Player) ((AreaEffectCloud) damager).getSource();
+		if (damager instanceof Player player) return player;
+		if (damager instanceof Projectile proj) return proj.getShooter() instanceof Player s ? s : null;
+		if (damager instanceof TNTPrimed tnt) return tnt.getSource() instanceof Player s ? s : null;
+		if (damager instanceof AreaEffectCloud aec) return aec.getSource() instanceof Player s ? s : null;
+		return null;
 	}
-
 }
