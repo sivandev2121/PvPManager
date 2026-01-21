@@ -22,41 +22,29 @@
 	</properties>
 
 	<repositories>
-		<!-- SpigotMC -->
 		<repository>
 			<id>spigot-repo</id>
 			<url>https://hub.spigotmc.org/nexus/content/groups/public/</url>
 		</repository>
 
-		<!-- Vault / Essentials / TAB -->
 		<repository>
 			<id>jitpack.io</id>
 			<url>https://jitpack.io</url>
 		</repository>
 
-		<!-- PlaceholderAPI -->
 		<repository>
 			<id>placeholderapi</id>
-			<url>
-				https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
+			<url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
 		</repository>
 
-		<!-- WorldGuard -->
 		<repository>
 			<id>sk89q-repo</id>
 			<url>https://maven.enginehub.org/repo/</url>
 		</repository>
 
-		<!-- SimpleClans -->
 		<repository>
 			<id>roinujnosde-repo</id>
 			<url>https://repo.roinujnosde.me/releases/</url>
-		</repository>
-
-		<!-- LibsDisguises -->
-		<repository>
-			<id>md_5-public</id>
-			<url>https://repo.md-5.net/content/groups/public/</url>
 		</repository>
 
 		<repository>
@@ -64,18 +52,15 @@
 			<url>https://repo.codemc.org/repository/maven-public</url>
 		</repository>
 
-		<!-- Towny -->
 		<repository>
 			<id>glaremasters repo</id>
 			<url>https://repo.glaremasters.me/repository/towny/</url>
 		</repository>
 
-		<!-- william278 (Husk) -->
 		<repository>
 			<id>william278.net</id>
 			<url>https://repo.william278.net/releases</url>
 		</repository>
-
 	</repositories>
 
 	<build>
@@ -123,7 +108,6 @@
 						</relocation>
 					</relocations>
 					<transformers>
-						<!-- Avoid overlapping MANIFEST.MF file -->
 						<transformer
 							implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
 							<resource>MANIFEST.MF</resource>
@@ -143,7 +127,6 @@
 	</build>
 
 	<dependencies>
-		<!-- Spigot API -->
 		<dependency>
 			<groupId>org.spigotmc</groupId>
 			<artifactId>spigot-api</artifactId>
@@ -164,7 +147,6 @@
 			</exclusions>
 		</dependency>
 
-		<!-- SimpleClans -->
 		<dependency>
 			<groupId>net.sacredlabyrinth.phaed.simpleclans</groupId>
 			<artifactId>SimpleClans</artifactId>
@@ -172,7 +154,6 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- Essentials -->
 		<dependency>
 			<groupId>com.github.EssentialsX.Essentials</groupId>
 			<artifactId>EssentialsX</artifactId>
@@ -186,7 +167,6 @@
 			</exclusions>
 		</dependency>
 
-		<!-- PlaceHolderAPI -->
 		<dependency>
 			<groupId>me.clip</groupId>
 			<artifactId>placeholderapi</artifactId>
@@ -194,7 +174,6 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- Vault -->
 		<dependency>
 			<groupId>com.github.MilkBowl</groupId>
 			<artifactId>VaultAPI</artifactId>
@@ -203,7 +182,6 @@
 			<optional>true</optional>
 		</dependency>
 
-		<!-- WorldGuard -->
 		<dependency>
 			<groupId>com.sk89q.worldguard</groupId>
 			<artifactId>worldguard-bukkit</artifactId>
@@ -230,15 +208,13 @@
 			</exclusions>
 		</dependency>
 
-		<!-- TAB -->
 		<dependency>
-  		  	<groupId>com.github.NEZNAMY</groupId>
-  			<artifactId>TAB-API</artifactId>
-  		  	<version>5.4.0</version>
-   		 	<scope>provided</scope>
+			<groupId>com.github.NEZNAMY</groupId>
+			<artifactId>TAB-API</artifactId>
+			<version>5.4.0</version>
+			<scope>provided</scope>
 		</dependency>
 
-		<!-- Towny -->
 		<dependency>
 			<groupId>com.palmergames.bukkit.towny</groupId>
 			<artifactId>towny</artifactId>
@@ -246,7 +222,6 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- HuskClaims -->
 		<dependency>
 			<groupId>net.william278.huskclaims</groupId>
 			<artifactId>huskclaims-bukkit</artifactId>
@@ -254,7 +229,6 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- HuskTowns -->
 		<dependency>
 			<groupId>net.william278.husktowns</groupId>
 			<artifactId>husktowns-bukkit</artifactId>
@@ -262,21 +236,6 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- LibsDisguises -->
-		<dependency>
-			<groupId>LibsDisguises</groupId>
-			<artifactId>LibsDisguises</artifactId>
-			<version>10.0.44</version>
-			<scope>provided</scope>
-			<exclusions>
-				<exclusion>
-					<groupId>*</groupId>
-					<artifactId>*</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-
-		<!-- KingdomsX -->
 		<dependency>
 			<groupId>com.github.cryptomorin</groupId>
 			<artifactId>kingdoms</artifactId>
@@ -284,7 +243,6 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- GriefPrevention -->
 		<dependency>
 			<groupId>com.github.TechFortress</groupId>
 			<artifactId>GriefPrevention</artifactId>
@@ -293,7 +251,6 @@
 			<optional>true</optional>
 		</dependency>
 
-		<!-- Unit Tests -->
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter</artifactId>
@@ -331,7 +288,6 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!-- Internal -->
 		<dependency>
 			<groupId>me.chancesd.sdutils</groupId>
 			<artifactId>sdutils</artifactId>
