@@ -1,11 +1,9 @@
 package me.chancesd.pvpmanager.integration.hook;
 
 import org.bukkit.entity.Player;
-
 import me.chancesd.pvpmanager.integration.BaseDependency;
 import me.chancesd.pvpmanager.integration.Hook;
 import me.chancesd.pvpmanager.integration.type.DisguiseDependency;
-import me.libraryaddict.disguise.DisguiseAPI;
 
 public class LibsDisguisesHook extends BaseDependency implements DisguiseDependency {
 
@@ -15,17 +13,17 @@ public class LibsDisguisesHook extends BaseDependency implements DisguiseDepende
 
 	@Override
 	public boolean isDisguised(final Player player) {
-		return DisguiseAPI.isDisguised(player);
+		return false; // Kütüphane silindiği için her zaman false döndürür
 	}
 
 	@Override
 	public void unDisguise(final Player player) {
-		DisguiseAPI.undisguiseToAll(player);
+		// Kütüphane silindiği için işlem yapmaz
 	}
 
 	@Override
 	public String onEnableMessage() {
-		return "LibsDisguises Found! Using it to disable disguises";
+		return "LibsDisguises integration disabled to fix build errors.";
 	}
 
 }
