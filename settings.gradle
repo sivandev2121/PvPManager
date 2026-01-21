@@ -1,2 +1,0 @@
-rootProject.name = 'pvpmanager-parent'
-include 'pvpmanager', 'pvpmanager-worldguard-legacy'
